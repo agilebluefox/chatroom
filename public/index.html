@@ -1,10 +1,82 @@
-<!DOCTYPE html>
-<title>Chatroom</title>
-<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<!doctype html>
+<html>
 
-<!-- JS -->
-<script src="//code.jquery.com/jquery-2.1.0.js"></script>
-<script src="main.js"></script>
+<head>
+  <title>David's Chatroom</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font: 13px Helvetica, Arial;
+    }
+    
+    form {
+      background: #000;
+      padding: 3px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      clear: both;
+    }
+    
+    form input {
+      border: 0;
+      padding: 10px;
+      width: 90%;
+      margin-right: .5%;
+    }
+    
+    form button {
+      width: 9%;
+      background: rgb(0, 255, 0);
+      border: none;
+      padding: 10px;
+    }
+    
+    #messages {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    #messages li {
+      padding: 5px 10px;
+    }
+    
+    #messages li:nth-child(odd) {
+      background: #eee;
+    }
+  </style>
+</head>
 
-<input type="text">
-<div id="messages"></div>
+<body>
+  <div class="pure-g">
+
+    <div id="stream" class="pure-u-1-2">
+      <h2>Messages:</h2>
+      <ul id="messages"></ul>
+    </div>
+    <div id="users" class="pure-u-1-2">
+      <h2>Logged In Users: <span id="num-users"></span></h2>
+      <ul id="usernames"></ul>
+    </div>
+    <div class="pure-u-1">
+      <form action="">
+        <input id="m" autocomplete="off" /><button>Send</button>
+      </form>
+
+    </div>
+  </div>
+  <!-- JS -->
+  <script src="//code.jquery.com/jquery-2.1.0.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
