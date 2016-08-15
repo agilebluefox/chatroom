@@ -1,101 +1,107 @@
 'use strict()';
 
 $(document).ready(function () {
+    // Initialize variables
+    let $window = $(window);
+    let $usernameInput = $('.usernameInput'); // Input for username
+    let $usernames = $('.usernames'); //List of active users
+    let $error = $('.error'); // Username error
+    let $messages = $('.messages'); // Messages area
+    let $inputMessage = $('.inputMessage'); // Input message input box
+
+    let $loginPage = $('.login.page'); // The login page
+    let $chatPage = $('.chat.page'); // The chatroom page
+    let $currentInput = $usernameInput.focus();
+
+    let username = null;
     let socket = io();
-    let users = $('#usernames');
-    let numUsers = $('#num-users');
-    let send = $('form#send-message');
-    let loginForm = $('#loginForm');
-    let login = $('form#get-username');
-    let loginInput = $('#u');
-    let loginError = $('p.error');
-    let messageForm = $('#messageForm');
-    let messageInput = $('#m');
-    let messages = $('#messages');
-    let privateChat = [];
 
-    // Expects an object to be passed with the message and sender
-    let addMessage = function (message) {
-        messages.append(`<li> ${message.username}: ${message.message} </li>`);
-        console.log(message);
-    };
-
-// Handle displaying the logged in users
-    let logUsers = function (loggedInUsers) {
-        users.empty();
-        for (let i = 0; i < loggedInUsers.length; i++) {
-            users.append(`<li><input type="checkbox" name="user" value="${loggedInUsers[i]}" /><label>${loggedInUsers[i]}</label></li>`);
-            console.log(`The user id is ${loggedInUsers[i]}.`);
+    $window.on('keydown', function (event) {
+        if (!(event.ctrlKey || event.metaKey || event.altKey)) {
+            $currentInput.focus();
         }
-        numUsers.text(loggedInUsers.length);
-    };
+
+        if (event.which === 13) {
+            if (username) {
+                sendMessage();
+            } else {
+                setUsername();
+            }
+        }
+    });
+
+    // Get the username val from the input
+    // Check that it's unique
+    function setUsername() {
+        username = $usernameInput.val().trim();
+        socket.emit('add user', username, function (data) {
+            if (data.isValid) {
+                $loginPage.fadeOut();
+                $chatPage.show();
+                $loginPage.off('click');
+                $currentInput = $inputMessage.focus();
+            } else {
+                username = null;
+                $usernameInput.val('');
+                $error.html('Username already taken. Try again.');
+                $currentInput = $usernameInput.focus();
+            }
+            return;
+        });
+    }
+
+    function logUsers(data) {
+        $usernames.empty();
+        for (let i = 0; i < data.length; i++) {
+            $usernames.append(`<li><input type="checkbox" name="user" value="${data[i]}" /><label>${data[i]}</li>`);
+        }
+    }
+
+    function sendMessage() {
+        let message = $inputMessage.val().trim();
+        let secretFriend = checkForSelectedUsers();
+        if(secretFriend) {
+            $messages.append(`<li class="secret"> ${username} -> ${secretFriend}: ${message} </li>`);
+            // send a private message
+        } else {
+            $messages.append(`<li> ${username}: ${message} </li>`);
+            socket.emit('message', message);
+        }
+        console.log(message);
+        $inputMessage.val('');
+    }
+
+    // Handle displaying the logged in users
+    // let logUsers = function (loggedInUsers) {
+    //     users.empty();
+    //     for (let i = 0; i < loggedInUsers.length; i++) {
+    //         users.append(`<li><input type="checkbox" name="user" value="${loggedInUsers[i]}" /><label>${loggedInUsers[i]}</label></li>`);
+    //         console.log(`The user id is ${loggedInUsers[i]}.`);
+    //     }
+    //     numUsers.text(loggedInUsers.length);
+    // };
 
     let checkForSelectedUsers = function () {
-        if ($("input:checked").length > 0) {
-            $("input:checked").each(function (index, user) {
-                privateChat.push($(this).val());
-            });
-            return true;
+        if ($("input[name=user]:checked").length > 0) {
+            console.log('something is checked');
+            let user = $("input[name=user]:checked").val();
+            return user;
         }
         else {
             return false;
         }
     };
 
-    socket.on('user', function (users) {
-        console.log(users);
-        logUsers(users);
+    socket.on('message', function(data) {
+        $messages.append(`<li> ${data.username}: ${data.message} </li>`);
     });
 
-    socket.on('message', addMessage);
-
-    socket.on('disconnect', function (data) {
-        data.message = 'has left the room';
-        addMessage(data);
-        logUsers(data.users);
+    socket.on('new user', function(data) {
+        logUsers(data);
     });
 
-    login.on('keydown', function (event) {
-        if (event.keyCode != 13) {
-            return;
-        }
-        // event.preventDefault();
-        
-        socket.emit('add user', { username: loginInput.val() }, function(data) {
-            if (data.isValid) {
-                loginForm.hide();
-                messageForm.show();
-            } else {
-                loginError.html('Username already taken. Try again.');
-            }
-        });
-        loginInput.val('');
-        return false;
+    socket.on('remove user', function(data) {
+        logUsers(data);
     });
 
-    send.on('keydown', function (event) {
-        if (event.keyCode != 13) {
-            return;
-        }
-        // event.preventDefault();
-
-        // Check to see if this is a private message.
-        if (checkForSelectedUsers()) {
-            console.log(`The ids selected are: ${privateChat}`);
-        }
-
-        // Send an object with the sender and the message
-        let message = messageInput.val();
-        console.log(socket.username);
-        let data = {
-                username: socket.username,
-                message: message
-            };
-        if (message) {
-            addMessage(data);
-            socket.emit('message', data);
-        }
-        messageInput.val('');
-        return false;
-    });
 });

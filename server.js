@@ -9,7 +9,7 @@ var express = require('express');
 
 // Setup an express app
 var app = express();
-app.use(express.static('./public'));
+app.use(express.static(__dirname + '/public'));
 
 /**
  * This app needs to support bidirectional communication so a Client
@@ -26,48 +26,33 @@ var numberOfConnections = 0;
 var users = [];
 
 // When a connection event occurs...
-// TODO: Send the current users to prevent duplicate usernames
 io.on('connection', function (socket) {
+    console.log('Client connected...');
 
-    // Upon login, get the username of the user and notify all connected users 
-    socket.on('add user', function (data, callback) {
-        var username = data.username;
-        console.log(username);
-        if (users.indexOf(username) !== -1) {
-            callback({ isValid: false });
-        } else {
-            callback({ isValid: true });
-            numberOfConnections += 1;
-            console.log(numberOfConnections);
-            logNumberClients(numberOfConnections);
+    socket.on('add user', function (username, callback) {
+        if (users.indexOf(username) === -1) {
+            users.push(username);
             socket.username = username;
-            users.push(socket.username);
-            io.emit('user', users);
-            var message = {
-                username: username,
-                message: 'has joined the conversation'
-            };
-            socket.broadcast.emit('message', message);
+            callback({ isValid: true });
+            console.log(username + ' joined the conversation');
+            io.emit('new user', users);
+        } else {
+            callback({ isValid: false });
         }
     });
 
-    // When a message is sent broadcast it to all the connected users
-    socket.on('message', function (message) {
-        console.log(message.username + ' says \'' + message.message + '\'');
-        socket.broadcast.emit('message', message);
+    socket.on('message', function (data) {
+        socket.broadcast.emit('message', {
+            username: socket.username,
+            message: data
+        });
     });
 
-    // When a socket is closed, remove the user from the object of logged in users
     socket.on('disconnect', function () {
-        var index = users.indexOf(socket.username);
-        users.splice(index, 1);
-        console.log(socket.username + ' has left the room.');
-        socket.broadcast.emit('disconnect', {
-            username: socket.username,
-            users: users
-        });
-        --numberOfConnections;
-        logNumberClients(numberOfConnections);
+        if (!socket.username) return;
+        console.log(socket.username + ' has left the room');
+        users.splice(users.indexOf(socket.username), 1);
+        io.emit('remove user', users);
     });
 });
 
@@ -84,4 +69,6 @@ function logNumberClients(connections) {
 }
 
 // Start listening on this port
-server.listen(8888);
+server.listen(8888, function () {
+    console.log('The server is running...');
+});
