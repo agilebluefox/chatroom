@@ -23,11 +23,11 @@ $(document).ready(function () {
 // Handle displaying the logged in users
     let logUsers = function (loggedInUsers) {
         users.empty();
-        for (let username in loggedInUsers) {
-            users.append(`<li><input type="checkbox" name="user" value="${username}" /><label>${username}</label></li>`);
-            console.log(`The user id for ${username} is ${loggedInUsers[username].id}`);
+        for (let i = 0; i < loggedInUsers.length; i++) {
+            users.append(`<li><input type="checkbox" name="user" value="${loggedInUsers[i]}" /><label>${loggedInUsers[i]}</label></li>`);
+            console.log(`The user id is ${loggedInUsers[i]}.`);
         }
-        numUsers.text(Object.keys(loggedInUsers).length);
+        numUsers.text(loggedInUsers.length);
     };
 
     let checkForSelectedUsers = function () {
@@ -47,36 +47,37 @@ $(document).ready(function () {
         logUsers(users);
     });
 
-// TODO: Check to see if a username already exists
-
     socket.on('message', addMessage);
 
-    socket.on('disconnect', function (users) {
-        logUsers(users);
+    socket.on('disconnect', function (data) {
+        data.message = 'has left the room';
+        addMessage(data);
+        logUsers(data.users);
     });
 
     login.on('keydown', function (event) {
-        event.preventDefault();
         if (event.keyCode != 13) {
             return;
         }
+        // event.preventDefault();
         
-        socket.emit('add user', { username: userInput.val() }, function(data) {
+        socket.emit('add user', { username: loginInput.val() }, function(data) {
             if (data.isValid) {
-                userForm.hide();
+                loginForm.hide();
                 messageForm.show();
             } else {
                 loginError.html('Username already taken. Try again.');
             }
         });
-        userInput.val('');
+        loginInput.val('');
+        return false;
     });
 
     send.on('keydown', function (event) {
-        // event.preventDefault();
         if (event.keyCode != 13) {
             return;
         }
+        // event.preventDefault();
 
         // Check to see if this is a private message.
         if (checkForSelectedUsers()) {
@@ -84,14 +85,15 @@ $(document).ready(function () {
         }
 
         // Send an object with the sender and the message
-        let message = {
-            username: username,
-            message: messageInput.val()
-        };
+        let message = messageInput.val();
+        console.log(socket.username);
+        let data = {
+                username: socket.username,
+                message: message
+            };
         if (message) {
-            addMessage(message);
-
-            socket.emit('message', message);
+            addMessage(data);
+            socket.emit('message', data);
         }
         messageInput.val('');
         return false;

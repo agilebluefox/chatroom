@@ -28,20 +28,26 @@ var users = [];
 // When a connection event occurs...
 // TODO: Send the current users to prevent duplicate usernames
 io.on('connection', function (socket) {
-    numberOfConnections += 1;
-    logNumberClients(numberOfConnections);
 
     // Upon login, get the username of the user and notify all connected users 
     socket.on('add user', function (data, callback) {
         var username = data.username;
+        console.log(username);
         if (users.indexOf(username) !== -1) {
             callback({ isValid: false });
         } else {
             callback({ isValid: true });
+            numberOfConnections += 1;
+            console.log(numberOfConnections);
+            logNumberClients(numberOfConnections);
             socket.username = username;
             users.push(socket.username);
             io.emit('user', users);
-            socket.broadcast.emit('message', data);
+            var message = {
+                username: username,
+                message: 'has joined the conversation'
+            };
+            socket.broadcast.emit('message', message);
         }
     });
 
@@ -53,22 +59,14 @@ io.on('connection', function (socket) {
 
     // When a socket is closed, remove the user from the object of logged in users
     socket.on('disconnect', function () {
-        var message = {};
-        for (var prop in users) {
-            if (users[prop] === socket.username) {
-                delete users[prop];
-                message = {
-                    username: users[prop],
-                    message: 'has left the room'
-                };
-                console.log(message.username + ' ' + message.message);
-                io.emit('message', message);
-                return;
-            }
-        }
-
-        io.emit('disconnect', users);
-        numberOfConnections -= 1;
+        var index = users.indexOf(socket.username);
+        users.splice(index, 1);
+        console.log(socket.username + ' has left the room.');
+        socket.broadcast.emit('disconnect', {
+            username: socket.username,
+            users: users
+        });
+        --numberOfConnections;
         logNumberClients(numberOfConnections);
     });
 });

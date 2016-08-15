@@ -5,13 +5,13 @@ $(document).ready(function () {
     var socket = io();
     var users = $('#usernames');
     var numUsers = $('#num-users');
-    var form = $('form#send-message');
+    var send = $('form#send-message');
     var loginForm = $('#loginForm');
     var login = $('form#get-username');
-    var userInput = $('#u');
+    var loginInput = $('#u');
     var loginError = $('p.error');
     var messageForm = $('#messageForm');
-    var input = $('#m');
+    var messageInput = $('#m');
     var messages = $('#messages');
     var privateChat = [];
 
@@ -24,11 +24,11 @@ $(document).ready(function () {
     // Handle displaying the logged in users
     var logUsers = function logUsers(loggedInUsers) {
         users.empty();
-        for (var _username in loggedInUsers) {
-            users.append('<li><input type="checkbox" name="user" value="' + _username + '" /><label>' + _username + '</label></li>');
-            console.log('The user id for ' + _username + ' is ' + loggedInUsers[_username].id);
+        for (var i = 0; i < loggedInUsers.length; i++) {
+            users.append('<li><input type="checkbox" name="user" value="' + loggedInUsers[i] + '" /><label>' + loggedInUsers[i] + '</label></li>');
+            console.log('The user id is ' + loggedInUsers[i] + '.');
         }
-        numUsers.text(Object.keys(loggedInUsers).length);
+        numUsers.text(loggedInUsers.length);
     };
 
     var checkForSelectedUsers = function checkForSelectedUsers() {
@@ -47,36 +47,37 @@ $(document).ready(function () {
         logUsers(users);
     });
 
-    // TODO: Check to see if a username already exists
-
     socket.on('message', addMessage);
 
-    socket.on('disconnect', function (users) {
-        logUsers(users);
+    socket.on('disconnect', function (data) {
+        data.message = 'has left the room';
+        addMessage(data);
+        logUsers(data.users);
     });
 
     login.on('keydown', function (event) {
-        event.preventDefault();
         if (event.keyCode != 13) {
             return;
         }
+        // event.preventDefault();
 
-        socket.emit('add user', { username: userInput.val() }, function (data) {
+        socket.emit('add user', { username: loginInput.val() }, function (data) {
             if (data.isValid) {
-                userForm.hide();
+                loginForm.hide();
                 messageForm.show();
             } else {
                 loginError.html('Username already taken. Try again.');
             }
         });
-        userInput.val('');
+        loginInput.val('');
+        return false;
     });
 
-    form.on('keydown', function (event) {
-        // event.preventDefault();
+    send.on('keydown', function (event) {
         if (event.keyCode != 13) {
             return;
         }
+        // event.preventDefault();
 
         // Check to see if this is a private message.
         if (checkForSelectedUsers()) {
@@ -84,16 +85,17 @@ $(document).ready(function () {
         }
 
         // Send an object with the sender and the message
-        var message = {
-            username: username,
-            message: input.val()
+        var message = messageInput.val();
+        console.log(socket.username);
+        var data = {
+            username: socket.username,
+            message: message
         };
         if (message) {
-            addMessage(message);
-
-            socket.emit('message', message);
+            addMessage(data);
+            socket.emit('message', data);
         }
-        input.val('');
+        messageInput.val('');
         return false;
     });
 });
