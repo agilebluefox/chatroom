@@ -22,22 +22,25 @@ var server = http.Server(app);
 var io = socket_io(server);
 
 // Counter to track client connections
-var numberOfConnections = 0;
-var users = [];
+var connections = 0;
+var users = {};
 
 // When a connection event occurs...
 io.on('connection', function (socket) {
     console.log('Client connected...');
 
     socket.on('add user', function (username, callback) {
-        if (users.indexOf(username) === -1) {
-            users.push(username);
-            socket.username = username;
-            callback({ isValid: true });
-            console.log(username + ' joined the conversation');
-            io.emit('new user', users);
-        } else {
+        if (username in users) {
             callback({ isValid: false });
+        } else {
+            callback({ isValid: true });
+            ++connections;
+            logNumberClients(connections);
+            socket.username = username;
+            users[socket.username] = socket;
+            console.log(Object.keys(users));
+            console.log(username + ' joined the conversation');
+            io.emit('new user', Object.keys(users));
         }
     });
 
@@ -48,11 +51,24 @@ io.on('connection', function (socket) {
         });
     });
 
+    socket.on('private', function (data) {
+        var sender = socket.username;
+        var recipient = data.to;
+        var message = data.message;
+        users[recipient].emit('private', {
+            sender: sender,
+            recipient: recipient,
+            message: message
+        });
+    });
+
     socket.on('disconnect', function () {
         if (!socket.username) return;
+        --connections;
+        logNumberClients(connections);
         console.log(socket.username + ' has left the room');
-        users.splice(users.indexOf(socket.username), 1);
-        io.emit('remove user', users);
+        delete users[socket.username];
+        io.emit('remove user', Object.keys(users));
     });
 });
 

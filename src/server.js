@@ -20,38 +20,54 @@ let server = http.Server(app);
 let io = socket_io(server);
 
 // Counter to track client connections
-let numberOfConnections = 0;
-let users = [];
+let connections = 0;
+let users = {};
 
 // When a connection event occurs...
-io.on('connection', function(socket) {
+io.on('connection', function (socket) {
     console.log('Client connected...');
 
-    socket.on('add user', function(username, callback) {
-        if (users.indexOf(username) === -1) {
-            users.push(username);
-            socket.username = username;
-            callback({isValid: true});
-            console.log(`${username} joined the conversation`);
-            io.emit('new user', users);
+    socket.on('add user', function (username, callback) {
+        if (username in users) {
+            callback({ isValid: false });
         } else {
-            callback({isValid: false});
+            callback({ isValid: true });
+            ++connections;
+            logNumberClients(connections);
+            socket.username = username;
+            users[socket.username] = socket;
+            console.log(Object.keys(users));
+            console.log(`${username} joined the conversation`);
+            io.emit('new user', Object.keys(users));
         }
     });
 
-    socket.on('message', function(data) {
+    socket.on('message', function (data) {
         socket.broadcast.emit('message', {
             username: socket.username,
             message: data
         });
     });
 
-    socket.on('disconnect', function() {
+    socket.on('private', function(data) {
+        let sender = socket.username;
+        let recipient = data.to;
+        let message = data.message;
+        users[recipient].emit('private', {
+            sender: sender,
+            recipient: recipient,
+            message: message
+        });
+    });
+
+    socket.on('disconnect', function () {
         if (!socket.username) return;
+        --connections;
+        logNumberClients(connections);
         console.log(`${socket.username} has left the room`);
-        users.splice(users.indexOf(socket.username), 1);
-        io.emit('remove user', users);
-    })
+        delete users[socket.username];
+        io.emit('remove user', Object.keys(users));
+    });
 
 });
 
@@ -68,9 +84,7 @@ function logNumberClients(connections) {
     }
 }
 
-
-
 // Start listening on this port
-server.listen(8888, function() {
+server.listen(8888, function () {
     console.log('The server is running...');
 });

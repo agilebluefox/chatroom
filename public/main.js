@@ -63,6 +63,11 @@ $(document).ready(function () {
         var secretFriend = checkForSelectedUsers();
         if (secretFriend) {
             $messages.append('<li class="secret"> ' + username + ' -> ' + secretFriend + ': ' + message + ' </li>');
+            // send a private message
+            socket.emit('private', {
+                to: secretFriend,
+                message: message
+            });
         } else {
             $messages.append('<li> ' + username + ': ' + message + ' </li>');
             socket.emit('message', message);
@@ -93,6 +98,10 @@ $(document).ready(function () {
 
     socket.on('message', function (data) {
         $messages.append('<li> ' + data.username + ': ' + data.message + ' </li>');
+    });
+
+    socket.on('private', function (data) {
+        $messages.append('<li class="secret"> ' + data.sender + ' -> ' + data.recipient + ': ' + data.message + ' </li>');
     });
 
     socket.on('new user', function (data) {
