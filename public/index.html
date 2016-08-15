@@ -15,6 +15,13 @@
     body {
       font: 13px Helvetica, Arial;
     }
+
+    #loginForm {
+    }
+
+    #messageForm {
+      display: none;
+    }
     
     form {
       background: #000;
@@ -32,7 +39,14 @@
       margin-right: .5%;
     }
     
-    form button {
+    button#login {
+      width: 9%;
+      background: rgb(0, 0, 255);
+      border: none;
+      padding: 10px;
+    }
+
+    button#send {
       width: 9%;
       background: rgb(0, 255, 0);
       border: none;
@@ -56,23 +70,31 @@
 </head>
 
 <body>
-  <div class="pure-g">
-
-    <div id="stream" class="pure-u-1-2">
-      <h2>Messages:</h2>
-      <ul id="messages"></ul>
-    </div>
-    <div id="users" class="pure-u-1-2">
-      <h2>Logged In Users: <span id="num-users"></span></h2>
-      <ul id="usernames"></ul>
-    </div>
-    <div class="pure-u-1">
-      <form action="">
-        <input id="m" autocomplete="off" /><button>Send</button>
-      </form>
-
+  <div id="loginForm">
+   <p class="error"></p>
+   
+     <form action="" id="get-username">
+          <input id="u" autocomplete="off" /><button id="login">Login</button>
+        </form>
+  </div>
+  <div id="messageForm">
+    <div class="pure-g">
+      <div id="stream" class="pure-u-1-2">
+        <h2>Messages:</h2>
+        <ul id="messages"></ul>
+      </div>
+      <div id="users" class="pure-u-1-2">
+        <h2>Logged In Users: <span id="num-users"></span></h2>
+        <ul id="usernames"></ul>
+      </div>
+      <div class="pure-u-1">
+        <form action="" id="send-message">
+          <input id="m" autocomplete="off" /><button id="send">Send</button>
+        </form>
+      </div>
     </div>
   </div>
+
   <!-- JS -->
   <script src="//code.jquery.com/jquery-2.1.0.js"></script>
   <script src="/socket.io/socket.io.js"></script>

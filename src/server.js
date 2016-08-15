@@ -9,8 +9,6 @@ const express = require('express');
 let app = express();
 app.use(express.static('./public'));
 
-
-
 /**
  * This app needs to support bidirectional communication so a Client
  * can maintain a connection with the server. When new data is 
@@ -26,50 +24,53 @@ let numberOfConnections = 0;
 let users = [];
 
 // When a connection event occurs...
+// TODO: Send the current users to prevent duplicate usernames
 io.on('connection', function (socket) {
     numberOfConnections += 1;
     logNumberClients(numberOfConnections);
 
-    // Upon login, get the nickname of the user and notify all connected users 
-    socket.on('identify', function (data) {
-
-        console.log(`${data.nickname} ${data.message}`);
-        users.push({
-            nickname: data.nickname,
-            id: socket.id
-        });
-        io.emit('user', users);
-        socket.broadcast.emit('message', data);
+    // Upon login, get the username of the user and notify all connected users 
+    socket.on('add user', function (data, callback) {
+        let username = data.username;
+        if (users.indexOf(username) !== -1) {
+            callback({ isValid: false });
+        } else {
+            callback({ isValid: true });
+            socket.username = username;
+            users.push(socket.username);
+            io.emit('user', users);
+            socket.broadcast.emit('message', data);
+        }
     });
 
     // When a message is sent broadcast it to all the connected users
     socket.on('message', function (message) {
-        console.log(`${message.nickname} says '${message.message}'`);
+        console.log(`${message.username} says '${message.message}'`);
         socket.broadcast.emit('message', message);
     });
 
-    // When a socket is closed, remove the user from the list of logged in users
+    // When a socket is closed, remove the user from the object of logged in users
     socket.on('disconnect', function () {
-        let userIndex = null;
-        users.forEach(function (user, index, array) {
-            if (user.id === socket.id) {
-                userIndex = index;
-                let message = {
-                    nickname: user.nickname,
+        let message = {};
+        for (let prop in users) {
+            if (users[prop] === socket.username) {
+                delete users[prop];
+                message = {
+                    username: users[prop],
                     message: 'has left the room'
                 };
+                console.log(`${message.username} ${message.message}`);
                 io.emit('message', message);
                 return;
             }
-        });
 
-        users.splice(userIndex, 1);
+        }
+
         io.emit('disconnect', users);
         numberOfConnections -= 1;
         logNumberClients(numberOfConnections);
     });
 });
-
 
 // Log the number of current users to the console
 function logNumberClients(connections) {
